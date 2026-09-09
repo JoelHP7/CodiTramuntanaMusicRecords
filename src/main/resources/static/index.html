@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Discography</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#127909;</text></svg>">
+    <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+
+<!--
+  The header lives outside the view container the router repaints, so the menu is
+  omnipresent by construction and can never be lost while navigating.
+-->
+<header class="app-header">
+    <a class="brand" href="#/">
+        <span class="brand-mark" aria-hidden="true">&#9835;</span>
+        Discography
+    </a>
+    <nav class="main-nav" aria-label="Main navigation">
+        <a href="#/" data-route="#/">Home</a>
+        <a href="#/artists" data-route="#/artists">Artists</a>
+        <a href="#/lps" data-route="#/lps">LPs</a>
+        <a href="/swagger-ui.html" target="_blank" rel="noopener">API docs &#8599;</a>
+    </nav>
+</header>
+
+<main id="app" aria-live="polite"></main>
+
+<footer class="app-footer">
+    <span>Discography &middot; technical test for CodiTramuntana</span>
+</footer>
+
+<div id="toast" class="toast" role="status" aria-live="assertive" hidden></div>
+
+<!-- ==================== TEMPLATES ==================== -->
+
+<template id="tpl-home">
+    <section class="view">
+        <header class="view-header">
+            <div>
+                <h1>Discography report</h1>
+                <p class="subtitle">One row per LP with its artist, number of songs and the authors of those songs.</p>
+            </div>
+        </header>
+        <div class="card table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">LP</th>
+                    <th scope="col">Artist</th>
+                    <th scope="col" class="numeric">Songs</th>
+                    <th scope="col">Authors</th>
+                </tr>
+                </thead>
+                <tbody class="report-rows"></tbody>
+            </table>
+        </div>
+        <nav class="shortcut-grid" aria-label="Management shortcuts">
+            <a class="shortcut" href="#/artists">
+                <h2>Manage artists</h2>
+                <p>Create, edit and delete the artists of the discography.</p>
+            </a>
+            <a class="shortcut" href="#/lps">
+                <h2>Manage LPs</h2>
+                <p>Create and edit LPs, filter them by artist and manage their songs.</p>
+            </a>
+        </nav>
+    </section>
+</template>
+
+<template id="tpl-report-row">
+    <tr>
+        <td><a class="lp-link"></a></td>
+        <td class="artist"></td>
+        <td class="songs numeric"></td>
+        <td class="authors"></td>
+    </tr>
+</template>
+
+<template id="tpl-artists">
+    <section class="view">
+        <header class="view-header">
+            <div>
+                <h1>Artists</h1>
+                <p class="subtitle">Every artist of the discography.</p>
+            </div>
+            <a class="button primary" href="#/artists/new">New artist</a>
+        </header>
+        <form class="filter-bar" role="search">
+            <label for="artist-filter">Filter by name</label>
+            <input type="search" id="artist-filter" name="name" placeholder="e.g. Metallica" autocomplete="off">
+            <button type="submit" class="button">Filter</button>
+            <button type="button" class="button ghost clear-filter">Clear</button>
+        </form>
+        <div class="card table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">Name</th>
+                    <th scope="col">Description</th>
+                    <th scope="col" class="actions-col">Actions</th>
+                </tr>
+                </thead>
+                <tbody class="artist-rows"></tbody>
+            </table>
+        </div>
+    </section>
+</template>
+
+<template id="tpl-artist-row">
+    <tr>
+        <td><a class="name-link"></a></td>
+        <td class="description muted"></td>
+        <td class="actions">
+            <a class="button small edit-link">Edit</a>
+            <button type="button" class="button small danger delete-button">Delete</button>
+        </td>
+    </tr>
+</template>
+
+<template id="tpl-artist-form">
+    <section class="view narrow">
+        <header class="view-header">
+            <h1 class="form-title"></h1>
+        </header>
+        <form class="card form">
+            <div class="field">
+                <label for="artist-name">Name</label>
+                <input type="text" id="artist-name" name="name" maxlength="120" required autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="artist-description">Description</label>
+                <textarea id="artist-description" name="description" rows="5" maxlength="5000"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="button primary">Save</button>
+                <a class="button ghost cancel-link" href="#/artists">Cancel</a>
+            </div>
+        </form>
+    </section>
+</template>
+
+<template id="tpl-artist-detail">
+    <section class="view">
+        <header class="view-header">
+            <div>
+                <h1 class="artist-name"></h1>
+                <p class="subtitle description"></p>
+            </div>
+            <div class="header-actions">
+                <a class="button edit-link">Edit</a>
+                <a class="button ghost" href="#/artists">Back to artists</a>
+            </div>
+        </header>
+        <div class="stat-grid">
+            <div class="card stat">
+                <span class="stat-value lp-count"></span>
+                <span class="stat-label">LPs by this artist</span>
+            </div>
+            <a class="card stat link lps-link">
+                <span class="stat-value" aria-hidden="true">&#8594;</span>
+                <span class="stat-label">See the LPs of this artist</span>
+            </a>
+        </div>
+        <h2 class="section-title">LPs</h2>
+        <div class="card table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">LP</th>
+                    <th scope="col">Description</th>
+                </tr>
+                </thead>
+                <tbody class="lp-rows"></tbody>
+            </table>
+        </div>
+    </section>
+</template>
+
+<template id="tpl-artist-lp-row">
+    <tr>
+        <td><a class="lp-link"></a></td>
+        <td class="description muted"></td>
+    </tr>
+</template>
+
+<template id="tpl-lps">
+    <section class="view">
+        <header class="view-header">
+            <div>
+                <h1>LPs</h1>
+                <p class="subtitle">Every LP of the discography.</p>
+            </div>
+            <a class="button primary" href="#/lps/new">New LP</a>
+        </header>
+        <form class="filter-bar" role="search">
+            <label for="lp-filter">Filter by artist name</label>
+            <input type="search" id="lp-filter" name="artistName" placeholder="e.g. Metallica" autocomplete="off">
+            <button type="submit" class="button">Filter</button>
+            <button type="button" class="button ghost clear-filter">Clear</button>
+        </form>
+        <div class="card table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">LP</th>
+                    <th scope="col">Artist</th>
+                    <th scope="col">Description</th>
+                    <th scope="col" class="actions-col">Actions</th>
+                </tr>
+                </thead>
+                <tbody class="lp-rows"></tbody>
+            </table>
+        </div>
+    </section>
+</template>
+
+<template id="tpl-lp-row">
+    <tr>
+        <td><a class="name-link"></a></td>
+        <td><a class="artist-link"></a></td>
+        <td class="description muted"></td>
+        <td class="actions">
+            <a class="button small edit-link">Edit</a>
+            <button type="button" class="button small danger delete-button">Delete</button>
+        </td>
+    </tr>
+</template>
+
+<template id="tpl-lp-form">
+    <section class="view narrow">
+        <header class="view-header">
+            <h1 class="form-title"></h1>
+        </header>
+        <form class="card form">
+            <div class="field">
+                <label for="lp-name">Name</label>
+                <input type="text" id="lp-name" name="name" maxlength="150" required autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="lp-artist">Artist</label>
+                <select id="lp-artist" name="artistId" required></select>
+            </div>
+            <div class="field">
+                <label for="lp-description">Description</label>
+                <textarea id="lp-description" name="description" rows="5" maxlength="5000"></textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="button primary">Save</button>
+                <a class="button ghost cancel-link" href="#/lps">Cancel</a>
+            </div>
+        </form>
+    </section>
+</template>
+
+<template id="tpl-lp-detail">
+    <section class="view">
+        <header class="view-header">
+            <div>
+                <h1 class="lp-name"></h1>
+                <p class="subtitle">by <a class="artist-link"></a></p>
+                <p class="description muted"></p>
+            </div>
+            <div class="header-actions">
+                <a class="button edit-link">Edit</a>
+                <a class="button ghost" href="#/lps">Back to LPs</a>
+            </div>
+        </header>
+
+        <h2 class="section-title">Songs</h2>
+        <div class="card table-wrapper">
+            <table class="data-table">
+                <thead>
+                <tr>
+                    <th scope="col">Song</th>
+                    <th scope="col">Authors</th>
+                    <th scope="col" class="actions-col">Actions</th>
+                </tr>
+                </thead>
+                <tbody class="song-rows"></tbody>
+            </table>
+        </div>
+
+        <h2 class="section-title">Add a song</h2>
+        <form class="card form inline-form add-song-form">
+            <div class="field">
+                <label for="song-name">Song name</label>
+                <input type="text" id="song-name" name="name" maxlength="150" required autocomplete="off">
+            </div>
+            <div class="field">
+                <label for="song-authors">Authors</label>
+                <input type="text" id="song-authors" name="authorNames" required autocomplete="off"
+                       placeholder="Comma separated, e.g. Hetfield, Hammett" list="author-options">
+                <datalist id="author-options"></datalist>
+                <small class="hint">Existing authors are reused; unknown names are created.</small>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="button primary">Add song</button>
+            </div>
+        </form>
+    </section>
+</template>
+
+<template id="tpl-song-row">
+    <tr>
+        <td class="name"></td>
+        <td class="authors"></td>
+        <td class="actions">
+            <button type="button" class="button small danger delete-button">Delete</button>
+        </td>
+    </tr>
+</template>
+
+<template id="tpl-empty-row">
+    <tr class="empty-row">
+        <td class="message muted"></td>
+    </tr>
+</template>
+
+<template id="tpl-message">
+    <section class="view">
+        <div class="card message-card">
+            <h1 class="title"></h1>
+            <p class="detail muted"></p>
+            <a class="button" href="#/">Back to home</a>
+        </div>
+    </section>
+</template>
+
+<script type="module" src="/js/app.js"></script>
+</body>
+</html>
