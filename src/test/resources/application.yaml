@@ -31,3 +31,4 @@ app:
 logging:
   level:
     org.hibernate.stat: WARN
+    org.hibernate.engine.internal: WARN
