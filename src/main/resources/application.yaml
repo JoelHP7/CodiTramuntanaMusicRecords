@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: music-records
+
+  datasource:
+    # SQLite pragmas travel in the JDBC URL on purpose:
+    #  - foreign_keys=on   -> SQLite disables FK enforcement by default, and the pragma
+    #                         is per-connection, so it must be applied to every connection.
+    #  - journal_mode=WAL  -> allows concurrent readers while a writer is active.
+    #  - busy_timeout      -> retries instead of failing immediately with SQLITE_BUSY.
+    # Hikari's connection-init-sql cannot be used here: it runs a single statement.
+    url: jdbc:sqlite:${DB_PATH:discography.db}?foreign_keys=on&journal_mode=WAL&busy_timeout=5000
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      pool-name: MusicRecordsPool
+      maximum-pool-size: 5
+      minimum-idle: 1
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  seeding:
+    enabled: true
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+
+logging:
+  level:
+    com.coditramuntana.musicrecords: DEBUG
+    org.springframework.web: INFO

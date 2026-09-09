@@ -1,0 +1,33 @@
+spring:
+  datasource:
+    # Tests run against SQLite too, never H2: the whole risk surface of this project
+    # (DDL generation, IDENTITY ids, TEXT columns, lower()/LIKE behaviour) is engine
+    # specific, so testing on another engine would validate nothing.
+    #
+    # A temp file is used instead of :memory: because every connection to :memory:
+    # opens its own empty database, which makes tables disappear at random.
+    #
+    # foreign_keys is intentionally left off here: SQLite cannot DROP CONSTRAINT, so
+    # ddl-auto=create-drop produces cleaner teardown without FK enforcement. FKs stay
+    # enabled in dev/production, where they actually protect data.
+    url: jdbc:sqlite:${java.io.tmpdir}/music-records-test.db?busy_timeout=5000
+    driver-class-name: org.sqlite.JDBC
+    hikari:
+      maximum-pool-size: 1
+
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: create-drop
+    open-in-view: false
+    properties:
+      hibernate:
+        generate_statistics: true
+
+app:
+  seeding:
+    enabled: false
+
+logging:
+  level:
+    org.hibernate.stat: WARN
