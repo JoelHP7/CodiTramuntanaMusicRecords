@@ -15,12 +15,14 @@ import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
-import lombok.Data;
-import lombok.EqualsAndHashCode;
+import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.ToString;
+import org.hibernate.Hibernate;
 
 import java.util.LinkedHashSet;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -33,17 +35,16 @@ import java.util.Set;
         name = "songs",
         uniqueConstraints = @UniqueConstraint(name = "uk_song_lp_name", columnNames = {"lp_id", "name"})
 )
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-@EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @ToString(onlyExplicitlyIncluded = true)
 public class Song {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @EqualsAndHashCode.Include
     @ToString.Include
     private Long id;
 
@@ -75,6 +76,30 @@ public class Song {
     public void replaceAuthors(Set<Author> newAuthors) {
         authors.clear();
         authors.addAll(newAuthors);
+    }
+
+    /**
+     * Equality by persisted identifier; transient instances are only equal to themselves.
+     *
+     * <p>This matters here more than anywhere else: several brand new songs are added to
+     * the same {@code Set} before being flushed, and comparing them only by a still null
+     * id would collapse them into a single element.
+     */
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (other == null || Hibernate.getClass(this) != Hibernate.getClass(other)) {
+            return false;
+        }
+        Song song = (Song) other;
+        return id != null && Objects.equals(id, song.getId());
+    }
+
+    @Override
+    public int hashCode() {
+        return Hibernate.getClass(this).hashCode();
     }
 
 }
