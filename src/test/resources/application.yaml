@@ -28,6 +28,15 @@ app:
   seeding:
     enabled: false
 
+  # This file replaces the main application.yaml in tests, it does not merge with it, so every
+  # JWT property has to be repeated here or the context fails to start.
+  security:
+    jwt:
+      secret: dGVzdC1zaWduaW5nLWtleS1mb3ItbXVzaWMtcmVjb3Jkcy0yNTZiIQ==
+      issuer: music-records
+      access-token-expiration-ms: 900000
+      refresh-token-expiration-ms: 604800000
+
 logging:
   level:
     org.hibernate.stat: WARN
