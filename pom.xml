@@ -13,7 +13,7 @@
 
     <groupId>com.coditramuntana</groupId>
     <artifactId>music-records</artifactId>
-    <version>1.0.0</version>
+    <version>1.1.0</version>
     <name>music-records</name>
     <description>Discography management REST API - CodiTramuntana technical test</description>
 
