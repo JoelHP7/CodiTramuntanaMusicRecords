@@ -513,3 +513,44 @@ textarea {
         flex-direction: column;
     }
 }
+
+/* ==========================================================================
+   Session
+   ========================================================================== */
+.session {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+}
+
+.session-user {
+    color: var(--c-muted);
+    font-size: 0.9rem;
+    white-space: nowrap;
+}
+
+/*
+   Controls that only make sense with a session. The class is toggled once on <body>, so no
+   view has to know anything about authentication.
+*/
+body:not(.authenticated) .auth-only {
+    display: none !important;
+}
+
+input[type="password"] {
+    padding: 0.5rem 0.7rem;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    background: var(--c-surface);
+    color: var(--c-text);
+    font: inherit;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+code {
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+    background: var(--c-bg);
+    border: 1px solid var(--c-border);
+    font-size: 0.85em;
+}
