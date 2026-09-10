@@ -24,6 +24,7 @@
         <a href="#/lps" data-route="#/lps">LPs</a>
         <a href="/swagger-ui.html" target="_blank" rel="noopener">API docs &#8599;</a>
     </nav>
+    <div class="session" id="session-box"></div>
 </header>
 
 <main id="app" aria-live="polite"></main>
@@ -86,7 +87,7 @@
                 <h1>Artists</h1>
                 <p class="subtitle">Every artist of the discography.</p>
             </div>
-            <a class="button primary" href="#/artists/new">New artist</a>
+            <a class="button primary auth-only" href="#/artists/new">New artist</a>
         </header>
         <form class="filter-bar" role="search">
             <label for="artist-filter">Filter by name</label>
@@ -114,8 +115,8 @@
         <td><a class="name-link"></a></td>
         <td class="description muted"></td>
         <td class="actions">
-            <a class="button small edit-link">Edit</a>
-            <button type="button" class="button small danger delete-button">Delete</button>
+            <a class="button small edit-link auth-only">Edit</a>
+            <button type="button" class="button small danger delete-button auth-only">Delete</button>
         </td>
     </tr>
 </template>
@@ -150,7 +151,7 @@
                 <p class="subtitle description"></p>
             </div>
             <div class="header-actions">
-                <a class="button edit-link">Edit</a>
+                <a class="button edit-link auth-only">Edit</a>
                 <a class="button ghost" href="#/artists">Back to artists</a>
             </div>
         </header>
@@ -193,7 +194,7 @@
                 <h1>LPs</h1>
                 <p class="subtitle">Every LP of the discography.</p>
             </div>
-            <a class="button primary" href="#/lps/new">New LP</a>
+            <a class="button primary auth-only" href="#/lps/new">New LP</a>
         </header>
         <form class="filter-bar" role="search">
             <label for="lp-filter">Filter by artist name</label>
@@ -223,8 +224,8 @@
         <td><a class="artist-link"></a></td>
         <td class="description muted"></td>
         <td class="actions">
-            <a class="button small edit-link">Edit</a>
-            <button type="button" class="button small danger delete-button">Delete</button>
+            <a class="button small edit-link auth-only">Edit</a>
+            <button type="button" class="button small danger delete-button auth-only">Delete</button>
         </td>
     </tr>
 </template>
@@ -264,7 +265,7 @@
                 <p class="description muted"></p>
             </div>
             <div class="header-actions">
-                <a class="button edit-link">Edit</a>
+                <a class="button edit-link auth-only">Edit</a>
                 <a class="button ghost" href="#/lps">Back to LPs</a>
             </div>
         </header>
@@ -283,8 +284,8 @@
             </table>
         </div>
 
-        <h2 class="section-title">Add a song</h2>
-        <form class="card form inline-form add-song-form">
+        <h2 class="section-title auth-only">Add a song</h2>
+        <form class="card form inline-form add-song-form auth-only">
             <div class="field">
                 <label for="song-name">Song name</label>
                 <input type="text" id="song-name" name="name" maxlength="150" required autocomplete="off">
@@ -308,7 +309,7 @@
         <td class="name"></td>
         <td class="authors"></td>
         <td class="actions">
-            <button type="button" class="button small danger delete-button">Delete</button>
+            <button type="button" class="button small danger delete-button auth-only">Delete</button>
         </td>
     </tr>
 </template>
@@ -317,6 +318,41 @@
     <tr class="empty-row">
         <td class="message muted"></td>
     </tr>
+</template>
+
+<template id="tpl-login">
+    <section class="view narrow">
+        <header class="view-header">
+            <div>
+                <h1>Sign in</h1>
+                <p class="subtitle">Reading the discography is public; changing it requires an account.</p>
+            </div>
+        </header>
+        <form class="card form login-form">
+            <div class="field">
+                <label for="login-username">User name</label>
+                <input type="text" id="login-username" name="username" required autocomplete="username">
+            </div>
+            <div class="field">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" name="password" required autocomplete="current-password">
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="button primary">Sign in</button>
+                <a class="button ghost cancel-link" href="#/">Cancel</a>
+            </div>
+            <p class="hint">Development users: <code>admin / admin123</code> and <code>user / user123</code>.</p>
+        </form>
+    </section>
+</template>
+
+<template id="tpl-session-anonymous">
+    <a class="button small" href="#/login">Sign in</a>
+</template>
+
+<template id="tpl-session-active">
+    <span class="session-user"></span>
+    <button type="button" class="button small ghost logout-button">Sign out</button>
 </template>
 
 <template id="tpl-message">

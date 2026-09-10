@@ -13,11 +13,12 @@ that exists only to exercise the API from a browser.
 | Layer | Choice |
 |---|---|
 | Language / runtime | Java 21 |
-| Framework | Spring Boot 3.5.6 (Web, Data JPA, Validation) |
+| Framework | Spring Boot 3.5.6 (Web, Data JPA, Validation, Security) |
 | Persistence | Hibernate 6.6 + **SQLite** (`org.xerial:sqlite-jdbc`, `hibernate-community-dialects`) |
 | API documentation | springdoc-openapi 2.8.15 (Swagger UI) |
 | Build | Maven, through the included wrapper (3.9.11) |
-| Tests | JUnit 5, Mockito, AssertJ, MockMvc |
+| Authentication | JWT (`io.jsonwebtoken:jjwt` 0.12.7), BCrypt password hashing |
+| Tests | JUnit 5, Mockito, AssertJ, MockMvc, spring-security-test |
 | Frontend | Vanilla ES modules, native `<template>` elements, CSS3 — no Node, no build step |
 
 ---
@@ -69,7 +70,7 @@ populated report.
 ## Running the tests
 
 ```bash
-./mvnw test          # 79 tests
+./mvnw test          # 108 tests
 ./mvnw clean verify  # full build
 ```
 
@@ -80,7 +81,7 @@ in the system temp directory.
 
 ```bash
 ./mvnw clean package
-java -jar target/music-records-1.0.0.jar
+java -jar target/music-records-1.1.0.jar
 ```
 
 ---
@@ -97,7 +98,8 @@ java -jar target/music-records-1.0.0.jar
 ### Seed data
 
 Seeding runs only when the database is empty, so restarting never duplicates anything. It
-can be disabled with `--app.seeding.enabled=false`.
+can be disabled with `--app.seeding.enabled=false`. The example users are seeded separately —
+see [Security](#security).
 
 | Artist | LP | Songs (authors) |
 |---|---|---|
@@ -127,6 +129,10 @@ Artist 1 ────< N Lp 1 ────< N Song N >──── N Author
 - An `Lp` has many `Song`s. Songs are part of the LP aggregate: deleting the LP deletes them.
 - A `Song` has many `Author`s and an `Author` writes many `Song`s (join table `song_authors`).
 - `Author` is a shared catalogue: authors are reused by name and never deleted automatically.
+
+Alongside the discography there are two entities supporting authentication, kept apart from the
+domain on purpose: `UserAccount` (name, BCrypt hash, role, enabled) and `RefreshToken` (opaque
+value, owner, expiry, revoked).
 
 ---
 
@@ -165,6 +171,15 @@ Full, browsable documentation is at `/swagger-ui.html`. Summary:
 | GET | `/api/authors` | Author catalogue, used to reuse existing authors | 200 |
 | GET | `/api/report/discography` | **Home page report**: LP, artist, song count, authors | 200 |
 
+### Authentication
+
+| Method | Path | Description | Status codes |
+|---|---|---|---|
+| POST | `/api/auth/login` | Exchanges credentials for an access and a refresh token | 200, 400, 401 |
+| POST | `/api/auth/refresh` | Renews the pair and revokes the token just used | 200, 400, 401 |
+| POST | `/api/auth/logout` | Revokes a refresh token | 204, 400 |
+| GET | `/api/auth/me` | Profile of the token owner | 200, 401 |
+
 Errors always share the same shape:
 
 ```json
@@ -178,11 +193,100 @@ Errors always share the same shape:
 
 ---
 
+## Security
+
+The API is protected with **JWT bearer tokens**. The model is deliberately asymmetric:
+
+| Operation | Requirement |
+|---|---|
+| Reading anything (`GET`) — report, artists, LPs, authors | **Public** |
+| Creating, updating or deleting (`POST`, `PUT`, `DELETE`) | **Valid access token** |
+| `/api/auth/me` | Valid access token |
+| Swagger UI and the static frontend | Public |
+
+Reads stay open so the application can be explored without credentials; everything that
+changes data requires a token.
+
+### Users
+
+Seeded on first start, **for development only**:
+
+| User | Password | Role |
+|---|---|---|
+| `admin` | `admin123` | `ADMIN` |
+| `user` | `user123` | `USER` |
+
+Passwords are stored as BCrypt hashes; the plain values above only exist in the seeder.
+
+### Getting and using a token
+
+```bash
+# 1. Log in
+curl -s -X POST http://localhost:8080/api/auth/login \
+  -H 'Content-Type: application/json' \
+  -d '{"username":"admin","password":"admin123"}'
+
+# 2. Use the accessToken from the response
+curl -X POST http://localhost:8080/api/artists \
+  -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer <accessToken>' \
+  -d '{"name":"Rammstein","description":"German band"}'
+```
+
+In Swagger UI the same thing is done with the **Authorize** button. In the frontend, signing
+in stores the tokens and every write carries them automatically.
+
+### Configuration
+
+```yaml
+app:
+  security:
+    jwt:
+      secret: ${JWT_SECRET:...}               # base64, must decode to >= 256 bits
+      access-token-expiration-ms: 900000      # 15 minutes
+      refresh-token-expiration-ms: 604800000  # 7 days
+```
+
+The committed key exists so the project runs out of the box. **A real deployment overrides it
+with the `JWT_SECRET` environment variable.**
+
+### Design decisions
+
+**A hand written filter instead of `oauth2-resource-server`.** The whole mechanism — signature,
+claims, expiry, populating the security context — is visible in `security/JwtService` and
+`security/JwtAuthenticationFilter` instead of hidden behind autoconfiguration. For a single
+application that both issues and verifies its own tokens, the resource server starter would add
+indirection without adding capability.
+
+**Refresh tokens are persisted and rotated.** They are opaque random values stored in
+`refresh_tokens`, not JWTs, because they are only ever looked up in the database. Persisting
+them is what makes revocation possible, so logging out genuinely ends the session instead of
+merely forgetting the token client side. Every refresh revokes the token it consumed, so a
+leaked refresh token stops working the moment its legitimate owner refreshes.
+
+**401 and 403 keep the same error contract as the rest of the API.** `@RestControllerAdvice`
+cannot help there: those failures are raised inside the filter chain, before the dispatcher
+servlet runs. `security/SecurityErrorWriter` serialises the same `ErrorResponse` shape, so a
+client parses every error the same way.
+
+**The filter never rejects a request by itself.** When there is no token, or the token is
+invalid, it simply leaves the security context empty and lets the authorization rules decide.
+That is what keeps the public read endpoints working without any special casing.
+
+**Login failures are deliberately vague.** An unknown user and a wrong password return the same
+message, so the endpoint cannot be used to find out which accounts exist. Logout answers 204
+even for an unknown token, for the same reason.
+
+**Timestamps are epoch milliseconds.** Consistent with the rest of the model, which avoids
+temporal types because SQLite has no native date type.
+
+---
+
 ## Project structure
 
 ```
 src/main/java/com/coditramuntana/musicrecords/
-├── config/          OpenAPI configuration and the database seeder
+├── config/          OpenAPI configuration and the data and user seeders
 ├── controller/      REST controllers + their route constants
 ├── exception/       Exception hierarchy and the global handler
 ├── mapper/          Manual entity <-> DTO mappers
@@ -190,16 +294,17 @@ src/main/java/com/coditramuntana/musicrecords/
 ├── model/dto/       Request and response payloads
 ├── model/projection/ Projections of the aggregated report queries
 ├── repository/      Spring Data repositories
+├── security/        JWT service, authentication filter, rules and error handlers
 └── service/         Business logic (interface + implementation)
 
 src/main/resources/
 ├── application.yaml
-└── static/          index.html, css/, js/ (api, router, dom, views)
+└── static/          index.html, css/, js/ (api, auth, router, dom, views)
 ```
 
-The frontend mirrors the same separation: `api.js` knows the HTTP contract, `router.js`
-resolves routes, `dom.js` renders `<template>` clones, and each file under `views/` owns a
-single screen.
+The frontend mirrors the same separation: `api.js` knows the HTTP contract, `auth.js` owns the
+session state, `router.js` resolves routes, `dom.js` renders `<template>` clones, and each file
+under `views/` owns a single screen.
 
 ---
 
@@ -220,7 +325,8 @@ branch itself is deleted once integrated, exactly as the model prescribes.
 
 The nine features were integrated in dependency order — `project-setup` → `domain-model` →
 `rest-api-foundation` → `artist-and-lp-crud` → `discography-report` → `sample-data` →
-`api-documentation` → `automated-test-suite` → `web-frontend` — so **every point along the
+`api-documentation` → `automated-test-suite` → `web-frontend`, and later `jwt-authentication` —
+so **every point along the
 integration line of `develop` compiles and passes the test suite**.
 
 To read the history:
@@ -317,7 +423,12 @@ and wrapping the response; the decision is deliberate, not an omission.
 - **Case insensitive uniqueness is enforced in the service layer.** SQLite unique indexes
   are case sensitive, so the index acts as a backstop while the service performs the actual
   check.
-- No authentication: the assignment does not ask for it and it would add noise to the review.
+- **No user management endpoints.** Users come from the seeder; there is no sign-up, password
+  change or admin screen, because a discography back office would provision accounts out of band.
+- **Role based authorization is modelled but not enforced.** Users carry `ADMIN` or `USER` and
+  the role travels in the token, yet every write only requires an authenticated user. Narrowing
+  deletions to `ADMIN` is a one line change in `SecurityConfig`; it was left out because the
+  scope chosen was "public reads, protected writes".
 
 ---
 

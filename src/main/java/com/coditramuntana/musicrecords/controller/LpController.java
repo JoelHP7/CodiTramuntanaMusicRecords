@@ -8,6 +8,7 @@ import com.coditramuntana.musicrecords.model.dto.SongRequest;
 import com.coditramuntana.musicrecords.service.LpService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -75,6 +76,7 @@ public class LpController {
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "Artist not found")
     @ApiResponse(responseCode = "409", description = "The artist already has an LP with the same name")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LpDto> createLp(@Valid @RequestBody LpRequest request) {
         log.info("POST {} - name='{}', artistId={}", BASE_PATH, request.getName(), request.getArtistId());
@@ -88,6 +90,7 @@ public class LpController {
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "LP or artist not found")
     @ApiResponse(responseCode = "409", description = "The artist already has another LP with the same name")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping(value = ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<LpDto> updateLp(@PathVariable Long id,
                                           @Valid @RequestBody LpRequest request) {
@@ -101,6 +104,7 @@ public class LpController {
     )
     @ApiResponse(responseCode = "204", description = "LP deleted")
     @ApiResponse(responseCode = "404", description = "LP not found")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping(ID_PATH)
     public ResponseEntity<Void> deleteLp(@PathVariable Long id) {
         log.info("DELETE {}{} - id={}", BASE_PATH, ID_PATH, id);
@@ -118,6 +122,7 @@ public class LpController {
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "LP not found")
     @ApiResponse(responseCode = "409", description = "The LP already contains a song with the same name")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(value = SONGS_PATH, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SongDto> addSong(@PathVariable Long lpId,
                                            @Valid @RequestBody SongRequest request) {
@@ -135,6 +140,7 @@ public class LpController {
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "LP not found, or the song does not belong to it")
     @ApiResponse(responseCode = "409", description = "The LP already contains another song with the same name")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping(value = SONG_ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<SongDto> updateSong(@PathVariable Long lpId,
                                               @PathVariable Long songId,
@@ -149,6 +155,7 @@ public class LpController {
     )
     @ApiResponse(responseCode = "204", description = "Song deleted")
     @ApiResponse(responseCode = "404", description = "LP not found, or the song does not belong to it")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping(SONG_ID_PATH)
     public ResponseEntity<Void> deleteSong(@PathVariable Long lpId,
                                            @PathVariable Long songId) {

@@ -1,4 +1,5 @@
 import { renderView, template, fill } from './dom.js';
+import { isAuthenticated } from './auth.js';
 
 /**
  * Minimal hash based router.
@@ -10,8 +11,13 @@ import { renderView, template, fill } from './dom.js';
  */
 const routes = [];
 
-export function route(pattern, view) {
-    routes.push({ pattern, view });
+/**
+ * Registers a route. Pass `{ requiresAuth: true }` for the screens that can only submit
+ * their work with a session, so the user is sent to the login form instead of filling in a
+ * whole form and hitting a 401 on save.
+ */
+export function route(pattern, view, options = {}) {
+    routes.push({ pattern, view, requiresAuth: options.requiresAuth === true });
 }
 
 function parseHash() {
@@ -21,10 +27,10 @@ function parseHash() {
 }
 
 function match(path) {
-    for (const { pattern, view } of routes) {
+    for (const { pattern, view, requiresAuth } of routes) {
         const result = pattern.exec(path);
         if (result) {
-            return { view, args: result.slice(1) };
+            return { view, requiresAuth, args: result.slice(1) };
         }
     }
     return null;
@@ -56,6 +62,11 @@ async function resolve() {
     const matched = match(path);
     if (!matched) {
         showMessage('Page not found', `There is nothing at ${path}.`);
+        return;
+    }
+
+    if (matched.requiresAuth && !isAuthenticated()) {
+        navigate(`#/login?redirect=${encodeURIComponent('#' + path)}`);
         return;
     }
 
