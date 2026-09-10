@@ -20,6 +20,7 @@
     <properties>
         <java.version>21</java.version>
         <springdoc.version>2.8.15</springdoc.version>
+        <jjwt.version>0.12.7</jjwt.version>
     </properties>
 
     <dependencies>
@@ -39,6 +40,36 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Spring Security -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-security</artifactId>
+        </dependency>
+
+        <!--
+            JSON Web Token support. Unlike the rest of the dependencies, jjwt is NOT
+            managed by the Spring Boot BOM, so the version has to be pinned explicitly.
+            The 0.12 line is used on purpose: 0.11 exposes a different, now deprecated
+            parsing API (Jwts.parserBuilder).
+        -->
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-api</artifactId>
+            <version>${jjwt.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-impl</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.jsonwebtoken</groupId>
+            <artifactId>jjwt-jackson</artifactId>
+            <version>${jjwt.version}</version>
+            <scope>runtime</scope>
         </dependency>
 
         <!--
@@ -74,6 +105,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Security test support (@WithMockUser and friends). Version managed by the BOM. -->
+        <dependency>
+            <groupId>org.springframework.security</groupId>
+            <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>
