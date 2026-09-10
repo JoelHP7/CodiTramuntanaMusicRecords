@@ -81,7 +81,7 @@ in the system temp directory.
 
 ```bash
 ./mvnw clean package
-java -jar target/music-records-1.0.0.jar
+java -jar target/music-records-1.1.0.jar
 ```
 
 ---
