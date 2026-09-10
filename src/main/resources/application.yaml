@@ -30,6 +30,15 @@ app:
   seeding:
     enabled: true
 
+  security:
+    jwt:
+      # Development key only: it is committed so the project runs out of the box. A real
+      # deployment overrides it with JWT_SECRET. Must be base64 and decode to >= 256 bits.
+      secret: ${JWT_SECRET:bXVzaWMtcmVjb3Jkcy1kZXZlbG9wbWVudC1zaWduaW5nLWtleS0yNTZiISE=}
+      issuer: music-records
+      access-token-expiration-ms: 900000      # 15 minutes
+      refresh-token-expiration-ms: 604800000  # 7 days
+
 springdoc:
   api-docs:
     path: /api-docs

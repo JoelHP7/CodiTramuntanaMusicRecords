@@ -1,3 +1,5 @@
+import { clearSession, getAccessToken, getRefreshToken, updateTokens } from './auth.js';
+
 const BASE_URL = '/api';
 
 /**
@@ -13,20 +15,80 @@ export class ApiError extends Error {
     }
 }
 
-async function request(method, path, body) {
-    const response = await fetch(BASE_URL + path, {
+function buildHeaders(body, withAuth) {
+    const headers = {};
+    if (body !== undefined) {
+        headers['Content-Type'] = 'application/json';
+    }
+    const token = getAccessToken();
+    if (withAuth && token) {
+        headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+}
+
+async function send(method, path, body, withAuth) {
+    return fetch(BASE_URL + path, {
         method,
-        headers: body === undefined ? undefined : { 'Content-Type': 'application/json' },
+        headers: buildHeaders(body, withAuth),
         body: body === undefined ? undefined : JSON.stringify(body),
     });
+}
 
+async function toPayload(response) {
     if (response.status === 204) {
         return null;
     }
-
     const isJson = response.headers.get('content-type')?.includes('application/json');
-    const payload = isJson ? await response.json() : null;
+    return isJson ? response.json() : null;
+}
 
+/**
+ * Tries to exchange the refresh token for a new pair. Returns true when the session could
+ * be renewed. Concurrent calls share the same in-flight request so a burst of 401s does not
+ * fire several refreshes.
+ */
+let refreshInFlight = null;
+
+async function tryRefresh() {
+    const refreshToken = getRefreshToken();
+    if (!refreshToken) {
+        return false;
+    }
+
+    if (!refreshInFlight) {
+        refreshInFlight = send('POST', '/auth/refresh', { refreshToken }, false)
+            .then(async (response) => {
+                if (!response.ok) {
+                    return false;
+                }
+                updateTokens(await response.json());
+                return true;
+            })
+            .catch(() => false)
+            .finally(() => {
+                refreshInFlight = null;
+            });
+    }
+    return refreshInFlight;
+}
+
+async function request(method, path, body, options = {}) {
+    const withAuth = options.withAuth !== false;
+    let response = await send(method, path, body, withAuth);
+
+    // A single retry after renewing the session: an expired access token should be
+    // invisible to the user, but a second 401 means the session is really over.
+    if (response.status === 401 && withAuth && !options.isRetry) {
+        const renewed = await tryRefresh();
+        if (renewed) {
+            response = await send(method, path, body, true);
+        } else {
+            clearSession();
+        }
+    }
+
+    const payload = await toPayload(response);
     if (!response.ok) {
         throw new ApiError(response.status, payload?.message ?? response.statusText);
     }
@@ -41,6 +103,12 @@ const query = (params) => {
 };
 
 export const api = {
+    auth: {
+        // Login and logout must not carry a stale Authorization header.
+        login: (credentials) => request('POST', '/auth/login', credentials, { withAuth: false }),
+        logout: (refreshToken) => request('POST', '/auth/logout', { refreshToken }, { withAuth: false }),
+        me: () => request('GET', '/auth/me'),
+    },
     artists: {
         list: (name) => request('GET', `/artists${query({ name })}`),
         get: (id) => request('GET', `/artists/${id}`),

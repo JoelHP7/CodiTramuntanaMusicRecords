@@ -7,6 +7,7 @@ import com.coditramuntana.musicrecords.model.dto.LpDto;
 import com.coditramuntana.musicrecords.service.ArtistService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -86,6 +87,7 @@ public class ArtistController {
     @ApiResponse(responseCode = "201", description = "Artist created")
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "409", description = "An artist with the same name already exists")
+    @SecurityRequirement(name = "bearerAuth")
     @PostMapping(consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ArtistDto> createArtist(@Valid @RequestBody ArtistRequest request) {
         log.info("POST {} - name='{}'", BASE_PATH, request.getName());
@@ -99,6 +101,7 @@ public class ArtistController {
     @ApiResponse(responseCode = "400", description = "Invalid payload")
     @ApiResponse(responseCode = "404", description = "Artist not found")
     @ApiResponse(responseCode = "409", description = "Another artist with the same name already exists")
+    @SecurityRequirement(name = "bearerAuth")
     @PutMapping(value = ID_PATH, consumes = MediaType.APPLICATION_JSON_VALUE, produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<ArtistDto> updateArtist(@PathVariable Long id,
                                                   @Valid @RequestBody ArtistRequest request) {
@@ -114,6 +117,7 @@ public class ArtistController {
     @ApiResponse(responseCode = "204", description = "Artist deleted")
     @ApiResponse(responseCode = "404", description = "Artist not found")
     @ApiResponse(responseCode = "409", description = "The artist still owns LPs")
+    @SecurityRequirement(name = "bearerAuth")
     @DeleteMapping(ID_PATH)
     public ResponseEntity<Void> deleteArtist(@PathVariable Long id) {
         log.info("DELETE {}{} - id={}", BASE_PATH, ID_PATH, id);
