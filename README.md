@@ -203,6 +203,40 @@ single screen.
 
 ---
 
+## Branching strategy
+
+The repository follows Vincent Driessen's **git-flow** model:
+
+| Branch | Purpose |
+|---|---|
+| `main` | Production state. Only ever receives merges from `release/*`, always tagged. |
+| `develop` | Integration branch. Holds the deliverable state of the next version. |
+| `feature/*` | One capability per branch, started from `develop` and integrated with `git merge --no-ff`. |
+| `release/1.0.0` | Delivery preparation: final documentation and versioning. Merged into `main` and back into `develop`. |
+
+Every integration uses `--no-ff` on purpose: the merge commit records both parents and the
+branch name, so each feature keeps its own bubble in the history graph even though the
+branch itself is deleted once integrated, exactly as the model prescribes.
+
+The nine features were integrated in dependency order — `project-setup` → `domain-model` →
+`rest-api-foundation` → `artist-and-lp-crud` → `discography-report` → `sample-data` →
+`api-documentation` → `automated-test-suite` → `web-frontend` — so **every point along the
+integration line of `develop` compiles and passes the test suite**.
+
+To read the history:
+
+```bash
+git log --graph --oneline --first-parent develop   # the integration line
+git log --graph --oneline --all                    # the full graph, with every feature bubble
+```
+
+One honest caveat: the tests live in a single `feature/automated-test-suite` branch because
+that reflects how the work actually happened — the suite was written once the domain model
+and the REST layer had settled. On a team practising continuous delivery, each feature would
+carry its own tests instead.
+
+---
+
 ## Design decisions
 
 These are the choices worth explaining, and why they were made.
